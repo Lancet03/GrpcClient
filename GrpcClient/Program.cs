@@ -12,8 +12,6 @@ internal class Program
         using var channel = GrpcChannel.ForAddress("https://localhost:7051");
         var metrics = new Greeter.GreeterClient(channel);
 
-        Console.ReadKey();
-
         bool continueInput = true;
         while (continueInput)
         {
