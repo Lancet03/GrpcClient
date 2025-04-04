@@ -10,30 +10,7 @@ internal class Program
     static async Task Main(string[] args)
     {
         using var channel = GrpcChannel.ForAddress("https://localhost:7051");
-        var client = new Greeter.GreeterClient(channel);
-
-        using var call = client.SayHelloStream();
-        var readTask = Task.Run(async () =>
-        {
-            await foreach (var resp in call.ResponseStream.ReadAllAsync())
-            {
-                Console.WriteLine(resp.Message);
-            }
-        });
-
-        var metrics = new SystemMetrics.SystemMetricsClient(channel);
-        using var metricsCall = metrics.GetMetricsStream();
-        var readMetricsTask = Task.Run(async () =>
-        {
-            await foreach (var response in metricsCall.ResponseStream.ReadAllAsync())
-            {
-                Console.WriteLine($"CPU Usage: {response.CpuUsage}%");
-                Console.WriteLine($"Available Memory: {response.AvailableMemoryMb} MB / {response.TotalMemoryMb} MB");
-                Console.WriteLine($"Disk Space: {response.FreeDiskSpaceGb} GB / {response.TotalDiskSpaceGb} GB");
-            }
-        });
-
-        Console.ReadKey();
+        var metrics = new Greeter.GreeterClient(channel);
 
         Console.ReadKey();
 
@@ -48,22 +25,16 @@ internal class Program
                         continueInput = false;
                         break;
                     }
-                case "m":
-                    {
-                        await metricsCall.RequestStream.WriteAsync(new MetrixRequest() { });
-                        break;
-
-                    }
                 default:
-                   { await call.RequestStream.WriteAsync(new HelloRequest() { Name = result });
+                    {
+                        var response = await metrics.GetMetricsAsync(new MetrixRequest());
+                        Console.WriteLine($"CPU Usage: {response.CpuUsage}%");
+                        Console.WriteLine($"Available Memory: {response.AvailableMemoryMb} MB / {response.TotalMemoryMb} MB");
+                        Console.WriteLine($"Disk Space: {response.FreeDiskSpaceGb} GB / {response.TotalDiskSpaceGb} GB");
+
                         break;
                     }
-
             }
         }
-
-        await call.RequestStream.CompleteAsync();
-        await metricsCall.RequestStream.CompleteAsync();
-        await readTask;
     }
 }
